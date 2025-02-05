@@ -134,6 +134,27 @@ func TestReturnStatements(t *testing.T) {
 			}`,
 			10,
 		},
+		{
+			`
+			let f = fn(x) {
+				return x;
+				x + 10;
+			};
+			f(10);
+			`,
+			10,
+		},
+		{
+			`
+			let f = fn(x) {
+				let result = x + 10;
+				return result;
+				return 10;
+			};
+			f(10);
+			`,
+			20,
+		},
 	}
 
 	for _, tt := range tests {
@@ -216,6 +237,96 @@ func TestLetStatementes(t *testing.T) {
 	for _, tt := range tests {
 		testIntegerObject(t, testEval(tt.input), tt.expected)
 	}
+}
+
+func TestFunctionObject(t *testing.T) {
+	input := "fn(x) { x + 2; };"
+
+	evaluated := testEval(input)
+	fn, ok := evaluated.(*object.Function)
+
+	if !ok {
+		t.Fatalf("object is not a Function. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(fn.Parameters) != 1 {
+		t.Fatalf("function has wrong parameters. Parameters=%+v", fn.Parameters)
+	}
+
+	if fn.Parameters[0].String() != "x" {
+		t.Fatalf("parameter is not 'x'. got=%q", fn.Parameters[0])
+	}
+
+	expectedBody := "(x + 2)"
+
+	if fn.Body.String() != expectedBody {
+		t.Fatalf("body is not %q. got=%q", expectedBody, fn.Body.String())
+	}
+}
+
+func TestFunctionApplication(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let identity = fn(x) { x; }; identity(5);", 5},
+		{"let identity = fn(x) { return x; }; identity(5);", 5},
+		{"let double = fn(x) { x * 2; }; double(5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn(x) { x; }(5)", 5},
+		{
+			`
+			let add = fn(a, b) {a + b};
+			let applyFunc = fn(a, b, func) { func(a, b) };
+			applyFunc(2, 3, add)
+			`,
+			5,
+		},
+		{
+			`
+			let sub = fn(a, b) { a - b };
+			let applyFunc = fn(a, b, func) { func(a, b) };
+			applyFunc(10, 2, sub);
+			`,
+			8,
+		},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}
+
+func TestEnclosingEnvironment(t *testing.T) {
+	input := `
+	let first = 10;
+	let second = 20;
+	let third = 30;
+
+	let outerFunction = fn(first) {
+		let second = 40;
+
+		first + second + third;
+	};
+
+	outerFunction(20) + first + second;
+	`
+
+	testIntegerObject(t, testEval(input), 120)
+}
+
+func TestClosures(t *testing.T) {
+	input := `
+	let newAdder = fn(x) {
+		fn(y) { x + y }
+	};
+
+	let addTwo = newAdder(3);
+	addTwo(2);
+	`
+
+	testIntegerObject(t, testEval(input), 5)
 }
 
 func testNullObject(t *testing.T, obj object.Object) bool {
