@@ -30,6 +30,7 @@ func TestNextToken(t *testing.T) {
 	"foo bar"
 	[1, 2];
 	[1, "foobar", x];
+	{"foo": "bar", 1: "number", true: "boolean"}
 	`
 
 	tests := []struct {
@@ -124,6 +125,19 @@ func TestNextToken(t *testing.T) {
 		{token.IDENT, "x"},
 		{token.RBRACKET, "]"},
 		{token.SEMICOLON, ";"},
+		{token.LBRACE, "{"},
+		{token.STRING, "foo"},
+		{token.COLON, ":"},
+		{token.STRING, "bar"},
+		{token.COMMA, ","},
+		{token.INT, "1"},
+		{token.COLON, ":"},
+		{token.STRING, "number"},
+		{token.COMMA, ","},
+		{token.TRUE, "true"},
+		{token.COLON, ":"},
+		{token.STRING, "boolean"},
+		{token.RBRACE, "}"},
 		{token.EOF, ""},
 	}
 
